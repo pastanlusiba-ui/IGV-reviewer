@@ -139,6 +139,10 @@ input, select {
 .stage-icon { font-size: 2rem; }
 .stage-card small { opacity: 0.84; }
 .stage-card.locked { filter: grayscale(0.3); opacity: 0.62; }
+.stage-card.selected-stage { outline: 4px solid rgba(255, 248, 233, 0.86); transform: translateY(-2px); }
+.active-workspace { border-color: rgba(189, 53, 39, 0.28); }
+.build-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 20px 0; }
+.build-card { border: 1px dashed rgba(55, 36, 24, 0.24); border-radius: 18px; padding: 16px; background: rgba(255, 255, 255, 0.5); font-weight: 800; }
 .ochre { background: linear-gradient(135deg, var(--ochre), #96561b); }
 .red { background: linear-gradient(135deg, var(--red), #762016); }
 .earth { background: linear-gradient(135deg, var(--earth), #2a1711); }
@@ -160,6 +164,6 @@ input, select {
   .app-shell { grid-template-columns: 1fr; }
   .sidebar { position: static; }
   .workspace { padding: 18px; }
-  .metric-grid, .stage-grid { grid-template-columns: 1fr; }
+  .metric-grid, .stage-grid, .build-grid { grid-template-columns: 1fr; }
   .project-header, .section-heading { display: grid; }
 }

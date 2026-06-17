@@ -19,11 +19,57 @@ const providerNotes: Record<AIProvider, string> = {
   deepseek: "Often low-cost and useful for coding/reasoning, but free access is not guaranteed."
 };
 
+const stageWorkspaces: Record<ReviewProcessStage, { title: string; purpose: string; buildNext: string[]; humanGate: string }> = {
+  searching: {
+    title: "Search & Import Workspace",
+    purpose: "Build search concepts, database strategies, imports, deduplication, and audit notes.",
+    buildNext: ["Search concept form", "Database strategy builder", "RIS/CSV import", "Deduplication review"],
+    humanGate: "A reviewer must approve the final search strategy before screening starts."
+  },
+  screening: {
+    title: "Title & Abstract Screening Workspace",
+    purpose: "Show references one-by-one with human votes, AI suggestions, conflicts, and inclusion criteria.",
+    buildNext: ["Reference queue", "Include/exclude/unclear buttons", "Conflict resolver", "AI suggestion sidebar"],
+    humanGate: "AI suggestions cannot finalize inclusion or exclusion. Human votes control decisions."
+  },
+  full_text_retrieval: {
+    title: "Full Text Retrieval Workspace",
+    purpose: "Track PDFs, missing documents, DOI lookups, upload status, and retrieval attempts.",
+    buildNext: ["PDF upload", "Open-access lookup", "Missing PDF tracker", "Retrieval notes"],
+    humanGate: "A reviewer confirms the attached PDF is the correct article."
+  },
+  full_text_screening: {
+    title: "Full Text Screening Workspace",
+    purpose: "Assess full texts against eligibility criteria and resolve full-text conflicts.",
+    buildNext: ["Full-text decision form", "Exclusion reason picker", "Conflict comparison", "Reviewer notes"],
+    humanGate: "A person makes the final full-text inclusion decision."
+  },
+  data_extraction: {
+    title: "Data Extraction Workspace",
+    purpose: "Capture study characteristics, outcomes, methods, excerpts, and reviewer checks.",
+    buildNext: ["Extraction form builder", "Study-level records", "Evidence excerpts", "Double extraction comparison"],
+    humanGate: "Extracted values are reviewer-entered or reviewer-approved."
+  },
+  synthesis_qa: {
+    title: "Synthesis & QA Workspace",
+    purpose: "Quality appraisal, bias checks, synthesis notes, and evidence tables.",
+    buildNext: ["Risk-of-bias form", "QA assignment board", "Synthesis notes", "Evidence summary table"],
+    humanGate: "Interpretation and certainty judgements remain human responsibilities."
+  },
+  report: {
+    title: "Report Writing Workspace",
+    purpose: "Draft report sections, PRISMA summary, appendices, and exports.",
+    buildNext: ["Section editor", "Citation manager", "Export to DOCX/PDF", "Final sign-off checklist"],
+    humanGate: "The final report requires human approval before export."
+  }
+};
+
 export function AppShell() {
   const [screen, setScreen] = useState<"home" | "login" | "welcome" | "projects" | "dashboard" | "settings">("home");
   const [project, setProject] = useState<ProjectDetail>(demoProject);
   const [connections, setConnections] = useState<AIConnection[]>(defaultConnections);
   const [activeMemberId, setActiveMemberId] = useState(project.lead.id);
+  const [activeStage, setActiveStage] = useState<ReviewProcessStage>("searching");
   const [stageWarning, setStageWarning] = useState("");
 
   const activeMember = useMemo(
@@ -41,7 +87,8 @@ export function AppShell() {
       setStageWarning(`${activeMember.name} is not assigned to ${stageTitle}. Ask the project owner to update stage assignments.`);
       return;
     }
-    setStageWarning(`${activeMember.name} opened ${reviewStages.find((item) => item.id === stage)?.title}.`);
+    setActiveStage(stage);
+    setStageWarning(`${activeMember.name} opened ${reviewStages.find((item) => item.id === stage)?.title}. This is the area we will wire to real data next.`);
   }
 
   function updateMemberStages(memberId: string, stage: ReviewProcessStage) {
@@ -100,6 +147,7 @@ export function AppShell() {
             stageWarning={stageWarning}
             canAccess={canAccess}
             openStage={openStage}
+            activeStage={activeStage}
             updateMemberStages={updateMemberStages}
             onSettings={() => setScreen("settings")}
           />
@@ -175,10 +223,12 @@ function DashboardScreen(props: {
   stageWarning: string;
   canAccess: (member: MemberSummary, stage: ReviewProcessStage) => boolean;
   openStage: (stage: ReviewProcessStage) => void;
+  activeStage: ReviewProcessStage;
   updateMemberStages: (memberId: string, stage: ReviewProcessStage) => void;
   onSettings: () => void;
 }) {
-  const { project, activeMember, activeMemberId, setActiveMemberId, stageWarning, canAccess, openStage, updateMemberStages, onSettings } = props;
+  const { project, activeMember, activeMemberId, setActiveMemberId, stageWarning, canAccess, openStage, activeStage, updateMemberStages, onSettings } = props;
+  const activeWorkspace = stageWorkspaces[activeStage];
 
   return (
     <section className="dashboard">
@@ -216,7 +266,7 @@ function DashboardScreen(props: {
             const allowed = canAccess(activeMember, stage.id);
             const assignedCount = project.members.filter((member) => member.role === "owner" || member.assignedStages.includes(stage.id)).length;
             return (
-              <button key={stage.id} className={`stage-card ${stage.tone} ${allowed ? "" : "locked"}`} onClick={() => openStage(stage.id)}>
+              <button key={stage.id} className={`stage-card ${stage.tone} ${allowed ? "" : "locked"} ${activeStage === stage.id ? "selected-stage" : ""}`} onClick={() => openStage(stage.id)}>
                 <span className="stage-icon">{stage.icon}</span>
                 <strong>{stage.title}</strong>
                 <span>{assignedCount} assigned</span>
@@ -226,6 +276,18 @@ function DashboardScreen(props: {
           })}
         </div>
         {stageWarning && <p className="notice">{stageWarning}</p>}
+      </section>
+
+      <section className="panel active-workspace">
+        <p className="eyebrow">Active build area</p>
+        <h2>{activeWorkspace.title}</h2>
+        <p>{activeWorkspace.purpose}</p>
+        <div className="build-grid">
+          {activeWorkspace.buildNext.map((item) => (
+            <div className="build-card" key={item}>{item}</div>
+          ))}
+        </div>
+        <p className="notice">{activeWorkspace.humanGate}</p>
       </section>
 
       <section className="panel">
